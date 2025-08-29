@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 
 import base64
-import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 import json
@@ -154,7 +153,7 @@ def create_gcash_payment(request):
                     }
                 }
             }
-        response = requests.post("https://api.paymongo.com/v1/links", headers=headers, json=payload)
+        response = request.post("https://api.paymongo.com/v1/links", headers=headers, json=payload)
         result = response.json()
         
         if "data" in result:
@@ -162,7 +161,7 @@ def create_gcash_payment(request):
             paymongo_id = result["data"]["id"]
             status_str = result["data"]["attributes"]["status"]
 
-            payment = PaymenMethod.objects.create(
+            payment = PaymentMethod.objects.create(
                 user=user,
                 total_price=data["total_price"],
                 is_paid = False,
@@ -195,7 +194,7 @@ def paymongo_webhook(request):
         if event_type == "link.payment.paid":
             paymongo_id  = payload["data"]["attrbutes"]["data"]["id"]
 
-            payment = PaymenMethod.objects.filter(paymongo_payment_id= paymongo_id)
+            payment = PaymentMethod.objects.filter(paymongo_payment_id= paymongo_id)
 
             if payment and not payment.is_paid:
                 payment.is_paid = True
@@ -233,7 +232,7 @@ def list_user_orders(request):
     with nested items and shipping address.
     """
     payments = (
-        PaymenMethod.objects
+        PaymentMethod.objects
         .filter(user=request.user)
         .order_by('-payment_id')
         .prefetch_related('orderitem_set__product', 'shippingaddress_set')
